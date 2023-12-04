@@ -1,28 +1,17 @@
-import { Request, Response } from "express";
-import { OAuth2Client } from "google-auth-library";
-import User from "../models/user.model";
+import { Request, Response } from 'express';
+import User from '../models/user.model';
+import { Document } from 'mongoose';
 
-const googleClient = new OAuth2Client({
-  clientId: `${process.env.GOOGLE_CLIENT_ID}`,
-  clientSecret: `${process.env.GOOGLE_CLIENT_SECRET}`
-});
+const authenticateUser = async (req: Request, res: Response) => {
+  const { token, name, email, picture } = req.body;
 
-export const authenticateUser = async (req: Request, res: Response) => {
-  const { token } = req.body;
+  let user: Document | null = await User.findOne({ email: email });
 
-  const ticket = await googleClient.verifyIdToken({
-    idToken: token,
-    audience: `${process.env.GOOGLE_CLIENT_ID}`,
-  });
-
-  const payload = ticket.getPayload();
-
-  let user = await User.findOne({ email: payload?.email });
   if (!user) {
-    user = await new User({
-      email: payload?.email,
-      avatar: payload?.picture,
-      name: payload?.name,
+    user = new User({
+      email: email,
+      name: name,
+      picture: picture,
     });
 
     await user.save();
@@ -30,3 +19,5 @@ export const authenticateUser = async (req: Request, res: Response) => {
 
   res.json({ user, token });
 };
+
+export { authenticateUser };
